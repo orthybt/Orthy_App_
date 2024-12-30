@@ -1,0 +1,11 @@
+MesialRotation:289,616
+DistalRotation:204,616
+MesialTip:288,579
+DistalTip:203,579
+BuccalLinear:289,692
+LingualLinear:204,690
+MesialLinear:288,763
+DistalLinear:202,764
+Intrusion:202,727
+PositiveTorque:288,653
+NegativeTorque:201,653

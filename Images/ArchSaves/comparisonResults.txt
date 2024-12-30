@@ -1,0 +1,8 @@
+Comparison between 'Furlan_2024-11-21_Antonia.svg' and 'Furlan_Dolje_2024-11-21_Antonia.svg':
+Image 'Furlan_2024-11-21_Antonia.svg': width=1920, height=1080
+Image 'Furlan_Dolje_2024-11-21_Antonia.svg': width=1920, height=1080
+
+Comparison between 'Furlan_Dolje_2024-11-21_Antonia.svg' and 'Furlan_2024-11-21_Stefan.svg':
+Image 'Furlan_Dolje_2024-11-21_Antonia.svg': width=1920, height=1080
+Image 'Furlan_2024-11-21_Stefan.svg': width=1920, height=1080
+

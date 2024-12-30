@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 1920 1080" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.5;">
+    <g id="Narrowtapered">
+    </g>
+    <g id="Narrowtapered1" serif:id="Narrowtapered" transform="matrix(2.75345,0,0,2.75345,-1686.05,-1568.5)">
+        <g id="NarrowTapered">
+            <path d="M755.138,953.657C754.658,943.503 753.698,923.194 753.853,907.954C754.019,891.575 754.152,872.809 756.138,855.38C758.306,836.356 761.275,813.88 766.86,793.811C773.732,769.12 786.054,732.584 797.368,707.236C807.616,684.276 820.292,659.564 834.743,641.72C848.274,625.012 867.215,610.01 884.075,600.169C899.824,590.977 917.832,585.077 935.908,582.673C955.328,580.09 983.041,581.757 1000.6,584.673C1014.9,587.049 1028.87,592.625 1041.25,600.169C1055.14,608.628 1072.61,620.853 1083.92,635.427C1097.9,653.438 1113.57,683.065 1125.15,708.236C1136.72,733.406 1146.45,761.927 1153.35,786.451C1159.69,808.971 1164.6,832.068 1166.59,855.38C1168.96,883.248 1168.04,930.188 1167.59,953.657" style="fill:none;stroke:black;stroke-width:0.18px;"/>
+        </g>
+    </g>
+    <g transform="matrix(2.75345,0,0,2.75345,-1686.05,-1568.5)">
+        <path d="M960.992,569.649L960.992,878.657" style="fill:none;stroke:black;stroke-width:0.18px;"/>
+    </g>
+</svg>
