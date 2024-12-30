@@ -28,14 +28,14 @@ class MaestroControlsPlugin(OrthyPlugin):
         
     def get_name(self): # Make sure the string here matches the filename!!!
 
-        return "Maestro Controls"
+        return "SegmentationMaestro"
 
     #this is the universal name for the method that returns the button(even if its only one)
     def get_btn_configs(self): 
        return [{
-            'text': 'Maestro Controls',
+            'text': 'Segmentation Maestro',
             'command': self.toggle_full_control,
-            'grid': {'row': 18, 'column': 0, 'columnspan': 2, 'pady': 2, 'sticky': 'ew'},
+            'grid': {'row': 22, 'column': 0, 'columnspan': 2, 'pady': 2, 'sticky': 'ew'},
             'width': 10,
             'variable_name': 'btn_toggle_full_control_maestro',
             'bg': 'red',
@@ -125,19 +125,15 @@ class MaestroControlsPlugin(OrthyPlugin):
         Guides user to select coords manually.
         """
         controls = [
-            'MesialTip',        'DistalTip',
-            'MesialRotation',   'DistalRotation', 
-            'PositiveTorque',   'NegativeTorque',
-            'BuccalLinear',     'LingualLinear', 
-            'Intrusion',        "Extrusion",
-            'MesialLinear',     'DistalLinear', 
-            "EnFace", "BottomView", "TopView",
-            "Play", "GridView", 
-            'InitialUpper', 'FinalUpper', 
-            'InitialLower', 'FinalLower',
-            'CentralOcclusion',
-            'UpperArch', 'LowerArch',
-            "EnFaceOcclusion", "LateralOcclusionLeft", "LateralOcclusionRight",
+            'EnFaceOcclusion', 'LateralOcclusionLeft', 'LateralOcclusionRight',
+            'Enface', 'BottomView', 'TopView',
+            'UpperArch', 'LowerArch', 
+            'JoinDivide', 'SegBrush',
+            'Smoothing', 'AddRemove', 
+            'DistalTip', 'MesialTip', 
+            'PositiveTorque', 'NegativeTorque',
+            'DistalLinear', 'MesialLinear',
+            'BuccalLinear', 'LingualLinear',
         ]
         self.ghost_click_positions = {}
 
@@ -268,18 +264,11 @@ class MaestroControlsPlugin(OrthyPlugin):
                     'q': 'DistalTip',
                     'z': 'DistalRotation',
                     'c': 'MesialRotation',
-                    'x': 'Intrusion',
-                    'v': 'Extrusion',
+                    'x': 'JoinDivide',
+                    'v': 'JoinDivide',
                     '1': 'EnFace',
                     '2': 'BottomView', 
                     '3': 'TopView',
-                    '4': 'Play',
-                    '5': 'GridView',
-                    '6': 'InitialUpper',
-                    '7': 'FinalUpper',
-                    '8': 'InitialLower', 
-                    '9': 'FinalLower',
-                    '0': 'CentralOcclusion',
                     '-': 'UpperArch',
                     '=': 'LowerArch',
                     'y': 'EnFaceOcclusion',
