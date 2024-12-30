@@ -6,3 +6,7 @@ git commit -m "Your commit message"
 
 # Push to the 'exports' branch
 git push -u origin exports
+
+git checkout -b laptop_temp
+
+git status
