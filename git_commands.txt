@@ -22,3 +22,18 @@ python -m venv .venv
 
 # Install dependencies
 pip install --upgrade pip
+
+# First, remove the current .git since we want to clone instead
+rm -rf .git
+
+# Clone the specific branch (laptop_temp) from your repository
+git clone -b laptop_temp https://github.com/orthybt/Orthy_App_.git .
+
+# Add the remote origin (though it should already be set from clone)
+git remote add origin https://github.com/orthybt/Orthy_App_.git
+
+# Fetch all branches
+git fetch origin
+
+# Switch to office_temp branch
+git checkout office_temp
