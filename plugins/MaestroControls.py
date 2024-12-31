@@ -119,7 +119,6 @@ class MaestroControlsPlugin(OrthyPlugin):
             return False
 
         return True
-
     def select_control_coordinates(self):
         """
         Guides user to select coords manually.
@@ -131,12 +130,12 @@ class MaestroControlsPlugin(OrthyPlugin):
             'BuccalLinear',     'LingualLinear', 
             'Intrusion',        "Extrusion",
             'MesialLinear',     'DistalLinear', 
-            "Occlusion", "Occlusion_Left", "Occlusion_Right",
-            "EnFace", "BottomView", "TopView",
-            "Play", "GridView", 
-            'InitialUpper', 'FinalUpper', 
-            'InitialLower', 'FinalLower',
-            'UpperArch', 'LowerArch',
+            "Occlusion",        "Occlusion_Left",       "Occlusion_Right",
+            "EnFace",           "BottomView",           "TopView",
+            "Play",             "GridView", 
+            'InitialUpper',     'SecondUpper',          'FinalUpper', 
+            'InitialLower',     'SecondLower',          'FinalLower',
+            'UpperArch',        'LowerArch',
         ]
         self.ghost_click_positions = {}
 
@@ -275,14 +274,16 @@ class MaestroControlsPlugin(OrthyPlugin):
                     '4': 'Play',
                     '5': 'GridView',
                     '6': 'InitialUpper',
+                    'y': 'SecondUpper',
                     '7': 'FinalUpper',
                     '8': 'InitialLower', 
+                    'i': 'SecondLower',
                     '9': 'FinalLower',
+                    '0': 'Occlusion',
                     '-': 'UpperArch',
                     '=': 'LowerArch',
-                    'y': 'Occlusion',
-                    'h': 'Occlusion_Left',
-                    'j': 'Occlusion_Right',
+                    'p': 'Occlusion_Left',
+                    'o': 'Occlusion_Right',
                 }
                 action = mapping.get(key.char)
                 if action:

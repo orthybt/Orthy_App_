@@ -1,18 +1,14 @@
-# orthy.spec
-
 block_cipher = None
 
 from PyInstaller.utils.hooks import collect_submodules
-import PyInstaller.__main__
+all_submodules = collect_submodules(".")
 
 a = Analysis(
-    ['orthy.py'],
-    pathex=['.'],
+    ["orthy.py"],  # Replace with your main script
+    pathex=["."],
     binaries=[],
-    datas=[
-    (r"C:\Users\User\OneDrive\Desktop\Orthy_App-GodSpeed", "Orthy_App-GodSpeed"),
-    ],
-    hiddenimports=[],
+    datas=[(".", ".")],  # Includes all files from the project folder
+    hiddenimports=all_submodules,
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
@@ -22,27 +18,19 @@ a = Analysis(
     noarchive=False
 )
 
-pyz = PYZ(
-    a.pure,
-    a.zipped_data,
-    cipher=block_cipher
-)
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
     pyz,
     a.scripts,
     [],
     exclude_binaries=True,
-    name='orthy',
+    name="orthy",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
     console=True,
-    disable_windowed_traceback=False,
-    append_pkg=False,
-    runtime_tmpdir=None,
-    
 )
 
 coll = COLLECT(
@@ -52,5 +40,5 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=True,
-    name='orthy'
+    name="orthy"
 )
