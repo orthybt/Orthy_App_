@@ -15,15 +15,15 @@ import ctypes
 import importlib
 from ctypes import wintypes
 from pynput.keyboard import Key
-from logging import Handler
+from logging import Handler 
 
 from core.OrthyPlugin_Interface import OrthyPlugin
 from core.plugin_loader import PluginLoader
 
 # Delete existing log file at startup
-log_file = "log.txt"
-if os.path.exists(log_file):
-    os.remove(log_file)
+#log_file = "log.txt"
+#if os.path.exists(log_file):
+#    os.remove(log_file)
 
 # Configure logging to write to log.txt and optionally to console
 logging.basicConfig(
@@ -31,7 +31,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
     handlers=[
-        logging.FileHandler(log_file, mode='w'),
+    #    logging.FileHandler(log_file, mode='w'),
         logging.StreamHandler()  # <-- If you want output in console too
     ]
 )
@@ -173,15 +173,11 @@ class Orthy:
 
     def setup_btn_configs_window(self):
         """Create the scrollable button area, load plugin btn_configs, etc."""
-        button_canvas = tk.Canvas(self.root)
-        scrollbar = tk.Scrollbar(self.root, orient="vertical", command=button_canvas.yview)
-        btn_frame = tk.Frame(button_canvas)
+        btn_frame = tk.Frame(self.root)
+        btn_frame.grid(row=0, column=0, sticky='nsew')
 
-        button_canvas.configure(yscrollcommand=scrollbar.set)
-        button_canvas.grid(row=0, column=0, sticky="nsew")
-        scrollbar.grid(row=0, column=1, sticky="ns")
-        button_canvas.create_window((0, 0), window=btn_frame, anchor="nw")
-
+        self.root.attributes("-topmost", True)
+        self.root.lift()
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
 
@@ -229,7 +225,7 @@ class Orthy:
                 
                 
         btn_frame.update_idletasks()
-        button_canvas.configure(scrollregion=button_canvas.bbox("all"))
+        #button_canvas.configure(scrollregion=button_canvas.bbox("all"))
         logging.info(f"Completed loading {plugin_button_count} plugin btn_configs")
 
     def create_button(self, parent, btn_cfg):
@@ -1088,9 +1084,7 @@ class Orthy:
         Stop all listeners, cleanup plugins, close windows,
         clear data, and reset internal state.
         """
-        
-
-
+        logging.info("Resetting all resources and plugins...")
         # 1. Stop plugin threads/listeners
         try:
             if hasattr(self, 'plugin_loader'):

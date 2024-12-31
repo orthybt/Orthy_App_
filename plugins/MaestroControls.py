@@ -279,7 +279,6 @@ class MaestroControlsPlugin(OrthyPlugin):
                     '7': 'FinalUpper',
                     '8': 'InitialLower', 
                     '9': 'FinalLower',
-                    '0': 'CentralOcclusion',
                     '-': 'UpperArch',
                     '=': 'LowerArch',
                     'y': 'EnFaceOcclusion',
