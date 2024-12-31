@@ -1,7 +1,6 @@
 import win32con
-import win32api
 import ctypes
-from ctypes import wintypes, POINTER, c_void_p, c_long, c_longlong, c_ulong, c_ulonglong, c_int, cast
+from ctypes import wintypes, POINTER, c_void_p, c_long, c_longlong, c_ulong, c_ulonglong
 import atexit
 import os
 import sys
@@ -40,33 +39,20 @@ class LowLevelKeyboardRemapper(OrthyPlugin):
         self.active_mode = False
         self.hook = None
         self.registered = False
-        self.interrupt_received = False
-        
-        # Virtual key codes
+        # Virtual key codes for WASD and arrows
         self.VK_W = 0x57
         self.VK_A = 0x41
         self.VK_S = 0x53
         self.VK_D = 0x44
-        self.VK_Q = 0x51
-        self.VK_LSHIFT = 0xA0
-        self.VK_CONTROL = 0x11
-        
-        # Track shift state
-        self.left_shift_pressed = False
-        
+
         self.key_map = {
-            self.VK_W: 0x26,  # VK_UP
-            self.VK_S: 0x28,  # VK_DOWN
-            self.VK_A: 0x25,  # VK_LEFT
-            self.VK_D: 0x27,  # VK_RIGHT
-        }
-        
-        # Add shift+Q combination
-        self.combo_map = {
-            (self.VK_LSHIFT, self.VK_Q): (0x11, 0x41)  # CTRL + A
+            self.VK_W: win32con.VK_UP,
+            self.VK_S: win32con.VK_DOWN,
+            self.VK_A: win32con.VK_LEFT,
+            self.VK_D: win32con.VK_RIGHT
         }
 
-        self.hooked_keys = set(self.key_map.keys()) | {self.VK_LSHIFT, self.VK_Q}
+        self.hooked_keys = set(self.key_map.keys())
         atexit.register(self.cleanup)
 
     def get_name(self):
@@ -107,13 +93,6 @@ class LowLevelKeyboardRemapper(OrthyPlugin):
         self.app = app_instance
         self.start_hook()
 
-    def handle_interrupt(self):
-        self.interrupt_received = True
-        self.cleanup()
-        logging.warning("[LLRemapper] Interrupt received, cleaning up...")
-        self.toggle_remap()
-
-
     def start_hook(self):
         """
         Installs a low-level keyboard hook if not already present.
@@ -153,63 +132,40 @@ class LowLevelKeyboardRemapper(OrthyPlugin):
         else:
             logging.error("[LLRemapper] Failed to install keyboard hook")
 
-    
     def low_level_handler(self, nCode, wParam, lParam):
-        if self.interrupt_received:
-            return 1
-        
-        user32 = ctypes.windll.user32
-        
+        """
+        The low-level keyboard callback that intercepts key presses.
+        """
+        if not self.active_mode:
+            return ctypes.windll.user32.CallNextHookEx(self.hook, nCode, wParam, lParam)
+
         try:
-            if not self.active_mode or nCode < 0:
-                print("Not active")
-                return user32.CallNextHookEx(self.hook, nCode, wParam, lParam)
-                
+            if nCode == win32con.HC_ACTION:
+                kb_struct = ctypes.cast(lParam, ctypes.POINTER(KBDLLHOOKSTRUCT)).contents
+                vk_code = kb_struct.vkCode
 
-            kbd = cast(lParam, POINTER(KBDLLHOOKSTRUCT)).contents
-            vk_code = kbd.vkCode
-            print(vk_code)
+                if vk_code in self.hooked_keys:
+                    if wParam in (win32con.WM_KEYDOWN, win32con.WM_SYSKEYDOWN):
+                        mapped_key = self.key_map[vk_code]
+                        ctypes.windll.user32.keybd_event(mapped_key, 0, 0, 0)
+                    elif wParam in (win32con.WM_KEYUP, win32con.WM_SYSKEYUP):
+                        mapped_key = self.key_map[vk_code]
+                        ctypes.windll.user32.keybd_event(mapped_key, 0, win32con.KEYEVENTF_KEYUP, 0)
 
-            if vk_code == 0x1B:  # VK_ESCAPE - Allow escape key to trigger safe shutdown
-                self.handle_interrupt()
-                return 1
+                    # Return -1 to block the original key
+                    return -1
 
-            # Track shift state
-            if vk_code == self.VK_LSHIFT:
-                self.left_shift_pressed = (wParam == win32con.WM_KEYDOWN)
-                logging.debug(f"[LLRemapper] Left Shift {'pressed' if self.left_shift_pressed else 'released'}")
-
-            # Handle shift+Q combo
-            if vk_code == self.VK_Q and self.left_shift_pressed:
-                if wParam == win32con.WM_KEYDOWN:
-                    key1, key2 = self.combo_map[(self.VK_LSHIFT, self.VK_Q)]
-                    win32api.keybd_event(key1, 0, 0, 0)
-                    win32api.keybd_event(key2, 0, 0, 0)
-                    win32api.keybd_event(key2, 0, win32con.KEYEVENTF_KEYUP, 0)
-                    win32api.keybd_event(key1, 0, win32con.KEYEVENTF_KEYUP, 0)
-                    logging.debug("[LLRemapper] CTRL + A triggered")
-                return 1
-
-            # Handle WASD remapping
-            if vk_code in self.key_map:
-                new_vk = self.key_map[vk_code]
-                if wParam == win32con.WM_KEYDOWN:
-                    win32api.keybd_event(new_vk, 0, 0, 0)
-                elif wParam == win32con.WM_KEYUP:
-                    win32api.keybd_event(new_vk, 0, win32con.KEYEVENTF_KEYUP, 0)
-                return 1
-
-        except KeyboardInterrupt:
-            self.handle_interrupt()
-            return 1
         except Exception as e:
-            logging.error(f"[LLRemapper] Error: {e}", exc_info=True)
-            return user32.CallNextHookEx(self.hook, nCode, wParam, lParam)
+            logging.error(f"[LLRemapper] Error in hook: {e}")
 
-        return user32.CallNextHookEx(self.hook, nCode, wParam, lParam)
+        
+        return ctypes.windll.user32.CallNextHookEx(self.hook, nCode, wParam, lParam)
 
     def cleanup(self):
-        if self.hook and not self.interrupt_received:
+        """
+        Uninstalls the keyboard hook if present.
+        """
+        if self.hook:
             ctypes.windll.user32.UnhookWindowsHookEx(self.hook)
             self.hook = None
             logging.info("[LLRemapper] Keyboard hook removed")
