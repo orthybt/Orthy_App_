@@ -2,12 +2,23 @@
 git add .
 
 # Commit with a message
-git commit -m "Always on top DONE and scroll removed"
+git commit -m "SaveCommit"
 
 # Push to the 'exports' branch
-git push -u origin laptop_temp
+git push -u origin current_working_temp
 
-git checkout -b laptop_temp
+git checkout current_working
+
+# Add all changes
+git add .
+
+# Commit with a message
+git commit -m "SaveCommit"
+
+# Push to the 'exports' branch
+git push -u origin current_working
+
+git checkout current_working_temp
 
 git status
 

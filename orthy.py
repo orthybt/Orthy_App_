@@ -20,11 +20,6 @@ from logging import Handler
 from core.OrthyPlugin_Interface import OrthyPlugin
 from core.plugin_loader import PluginLoader
 
-# Delete existing log file at startup
-#log_file = "log.txt"
-#if os.path.exists(log_file):
-#    os.remove(log_file)
-
 # Configure logging to write to log.txt and optionally to console
 logging.basicConfig(
     level=logging.INFO,  # or DEBUG, etc.
@@ -93,6 +88,9 @@ class Orthy:
         # Plugin system
         self.plugin_loader = PluginLoader()
         self.plugin_loader.load_plugins(self)
+        setattr(self, 'img_control_plugin', self.plugin_loader.get_plugin("ImageControl"))
+        setattr(self, 'maestro_controls_plugin', self.plugin_loader.get_plugin("MaestroControls"))
+        setattr(self, 'keyboard_remap_plugin', self.plugin_loader.get_plugin("KeyboardRemap"))
 
         # Basic paths & geometry
         self.base_dir = get_base_dir()
@@ -151,7 +149,7 @@ class Orthy:
 
     def set_root_window_geometry(self):
         """Position the main control window on the right side of the screen."""
-        window_width = 150
+        window_width = 110
         button_height = 25
         padding = 2
         num_rows = 20
@@ -172,16 +170,12 @@ class Orthy:
     #################################################################
 
     def setup_btn_configs_window(self):
-        """Create the scrollable button area, load plugin btn_configs, etc."""
-        button_canvas = tk.Canvas(self.root)
-        scrollbar = tk.Scrollbar(self.root, orient="vertical", command=button_canvas.yview)
-        btn_frame = tk.Frame(button_canvas)
+        """Create the button area, load plugin btn_configs, etc."""
+        btn_frame = tk.Frame(self.root)
+        btn_frame.grid(row=0, column=0, sticky='nsew')
 
-        button_canvas.configure(yscrollcommand=scrollbar.set)
-        button_canvas.grid(row=0, column=0, sticky="nsew")
-        scrollbar.grid(row=0, column=1, sticky="ns")
-        button_canvas.create_window((0, 0), window=btn_frame, anchor="nw")
-
+        self.root.attributes("-topmost", True)
+        self.root.lift()
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
 
@@ -194,8 +188,16 @@ class Orthy:
             'variableName': 'btn_toggle_transparency'
         }
         self.create_button(btn_frame, transparency_config)
+        # Reset button
+        reset_config = {
+            'text': "Reset",
+            'command': self.reset_all,
+            'grid': {'row': 21, 'column': 0, 'columnspan': 2, 'pady': 2, 'sticky': 'ew'},
+            'width': 15,
+            'variableName': 'btn_reset'
+        }
+        self.create_button(btn_frame, reset_config)
         last_row = 1
-        
         self.create_image_hide_show(btn_frame)          # Hide/Show
         self.create_flip_controls(btn_frame)            # Flip H/V
         self.create_rotation_point_control(btn_frame)   # Rotation Point
@@ -229,7 +231,6 @@ class Orthy:
                 
                 
         btn_frame.update_idletasks()
-        button_canvas.configure(scrollregion=button_canvas.bbox("all"))
         logging.info(f"Completed loading {plugin_button_count} plugin btn_configs")
 
     def create_button(self, parent, btn_cfg):
@@ -261,6 +262,7 @@ class Orthy:
             setattr(self, var_name, button) # Add an attribute to self, and bind the variable name
                                             # to the button object
         return button
+
 
     def create_image_hide_show(self, parent):
         """Build the Hide/Show button for the image window."""
@@ -303,18 +305,20 @@ class Orthy:
             self.create_button(parent, btn_cfg)
 
     def create_rotation_point_control(self, parent):
-        btn_configs = [
-            {
-                'text': 'Rot Pt',
-                'command': self.toggle_rotation_point_mode,
-                'grid': {'row': 3, 'column': 0, 'columnspan': 2, 'pady': 2, 'sticky': 'ew'},
-                'width': 10,
-                'variableName': 'btn_rotation_point'
-            }
-        ]
-        for btn_cfg in btn_configs:
-            self.create_button(parent, btn_cfg)
-
+        if hasattr(self, 'img_control_plugin'):
+            toggle_rotation_point_mode = self.img_control_plugin.toggle_rotation_point_mode
+            btn_configs = [
+                {
+                    'text': 'Rot Pt',
+                    'command': toggle_rotation_point_mode,
+                    'grid': {'row': 3, 'column': 0, 'columnspan': 2, 'pady': 2, 'sticky': 'ew'},
+                    'width': 10,
+                    'variableName': 'btn_rotation_point'
+                }
+            ]
+            for btn_cfg in btn_configs:
+                self.create_button(parent, btn_cfg)
+                
     def create_zoom_controls(self, parent):
         btn_configs = [
             {
@@ -378,6 +382,16 @@ class Orthy:
             }
             self.create_button(parent, btn_cfg)
 
+    def create_reset_button(self, parent):
+        btn_configs = [{
+            'text': 'Reset',
+            'command': self.reset_all(),
+            'grid': {'row': 1, 'column': 0, 'columnspan': 2, 'pady': 2, 'sticky': 'ew'},
+            'width': 10,
+            'variableName': 'btn_reset'
+        }]
+        for btn_cfg in btn_configs:
+            self.create_button(parent, btn_cfg)
     ########################################################################
     # Image Window
     ########################################################################
@@ -447,12 +461,17 @@ class Orthy:
         def toggle_wsad_remap():
             logging.info("Global hotkey: Ctrl+Alt+4 pressed. Toggling WASD remap.")
             self.root.after(0, self.toggle_low_level_keyboard_remap_from_plugin)
+
+        def reset_all():
+            logging.info("Global hotkey: Ctrl+Alt+5 pressed. Resetting all transformations.")
+            self.root.after(0, self.reset_all)
         try:
             self.global_hotkey_listener = keyboard.GlobalHotKeys({
                 '<ctrl>+<alt>+1': toggle_image_control_hotkey,
                 '<ctrl>+<alt>+2': toggle_image_window_hotkey,
                 '<ctrl>+<alt>+3': toggle_full_control_maestro_hotkey,  
-                '<ctrl>+<alt>+4': toggle_wsad_remap
+                '<ctrl>+<alt>+4': toggle_wsad_remap,
+                '<ctrl>+<alt>+5': reset_all,
             })
             self.global_hotkey_listener.start()
             logging.info("Global Hotkeys listener started successfully.")
@@ -799,23 +818,7 @@ class Orthy:
     # Rotation, Zoom, Flips
     ########################################################################
 
-    def toggle_rotation_point_mode(self):
-        active_image = self.get_active_image()
-        if not active_image:
-            return
-        if not self.is_rotation_point_mode:
-            self.is_rotation_point_mode = True
-            if hasattr(self, 'btn_rotation_point'):
-                self.btn_rotation_point.config(text="Cancel Rot Pt")
-            logging.info("Rotation point mode enabled.")
-        else:
-            self.is_rotation_point_mode = False
-            if hasattr(self, 'btn_rotation_point'):
-                self.btn_rotation_point.config(text="Rot Pt")
-            active_image.rotation_point = None
-            logging.info("Rotation point mode disabled and rotation point reset.")
-            self.draw_images()
-
+    
     def zoom_in(self):
         self.adjust_zoom(0.05)
 
@@ -1088,9 +1091,7 @@ class Orthy:
         Stop all listeners, cleanup plugins, close windows,
         clear data, and reset internal state.
         """
-        
-
-
+        logging.info("Resetting all resources and plugins...")
         # 1. Stop plugin threads/listeners
         try:
             if hasattr(self, 'plugin_loader'):
@@ -1134,10 +1135,30 @@ class Orthy:
         #    do not destroy self.root. Otherwise, you can close it too.
         # self.root.destroy()
         # Or re-init your plugins if you want to “start fresh.”
-
+        self.restart()
         logging.info("All plugins and resources have been cleaned up.")
     def restart(self):
+        # Re-initialize image window
+        self.setup_image_window()
+
+        # Re-initialize variables and flags
+        self.is_dragging = False
+        self.is_rotation_point_mode = False
+        self.image_window_visible = False
+        self.alt_pressed = False 
+        self.shift_pressed = False
+        self.full_control_mode = False
+        self.additional_windows = []
+
+        # Re-setup global hotkeys
+        self.setup_global_hotkeys()
+
+         # Reload plugins
+        logging.info("Reloading plugins...")
         self.plugin_loader.load_plugins(self)
+
+        # Re-setup UI
+        self.setup_btn_configs_window()
 
 ##################aaadd############################################################
 # Main Entry Point
