@@ -20,11 +20,6 @@ from logging import Handler
 from core.OrthyPlugin_Interface import OrthyPlugin
 from core.plugin_loader import PluginLoader
 
-# Delete existing log file at startup
-#log_file = "log.txt"
-#if os.path.exists(log_file):
-#    os.remove(log_file)
-
 # Configure logging to write to log.txt and optionally to console
 logging.basicConfig(
     level=logging.INFO,  # or DEBUG, etc.
@@ -172,7 +167,7 @@ class Orthy:
     #################################################################
 
     def setup_btn_configs_window(self):
-        """Create the scrollable button area, load plugin btn_configs, etc."""
+        """Create the button area, load plugin btn_configs, etc."""
         btn_frame = tk.Frame(self.root)
         btn_frame.grid(row=0, column=0, sticky='nsew')
 
@@ -225,7 +220,6 @@ class Orthy:
                 
                 
         btn_frame.update_idletasks()
-        #button_canvas.configure(scrollregion=button_canvas.bbox("all"))
         logging.info(f"Completed loading {plugin_button_count} plugin btn_configs")
 
     def create_button(self, parent, btn_cfg):

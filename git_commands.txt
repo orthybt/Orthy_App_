@@ -2,10 +2,10 @@
 git add .
 
 # Commit with a message
-git commit -m "Your commit message"
+git commit -m "Always on top DONE and scroll removed"
 
 # Push to the 'exports' branch
-git push -u origin exports
+git push -u origin laptop_temp
 
 git checkout -b laptop_temp
 

@@ -15,17 +15,23 @@ import ctypes
 import importlib
 from ctypes import wintypes
 from pynput.keyboard import Key
-from logging import Handler
+from logging import Handler 
 
 from core.OrthyPlugin_Interface import OrthyPlugin
 from core.plugin_loader import PluginLoader
 
-# Configure the logger
+# Configure logging to write to log.txt and optionally to console
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.INFO,  # or DEBUG, etc.
     format='%(asctime)s - %(levelname)s - %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    datefmt='%Y-%m-%d %H:%M:%S',
+    handlers=[
+    #    logging.FileHandler(log_file, mode='w'),
+        logging.StreamHandler()  # <-- If you want output in console too
+    ]
 )
+
+logging.info("Logging system initialized.")
 
 def resource_path(relative_path):
     """Return the absolute path to the resource, whether running in a frozen app or not."""
@@ -106,6 +112,10 @@ class Orthy:
         # Additional flags
         self.small_font = tk.font.Font(size=8)
 
+        # Mapping for plugin buttons
+        self.plugin_buttons = {}
+        self.plugin_sentinels = {}
+
         # Mapping for toggled images
         self.additional_images_visibility = {
             "Ruler": False,
@@ -118,7 +128,7 @@ class Orthy:
         }
 
         # Build UI
-        self.setup_buttons_window()
+        self.setup_btn_configs_window()
         self.setup_image_window()
 
         # Attempt to set default transparency button state
@@ -136,7 +146,7 @@ class Orthy:
 
     def set_root_window_geometry(self):
         """Position the main control window on the right side of the screen."""
-        window_width = 135
+        window_width = 150
         button_height = 25
         padding = 2
         num_rows = 20
@@ -153,20 +163,16 @@ class Orthy:
         self.root.geometry(f"{window_width}x{window_height}+{x_position}+{y_position}")
 
     ########################################################################
-    # UI Setup
-    ########################################################################
+    #####   UI Setup    #####
+    #################################################################
 
-    def setup_buttons_window(self):
-        """Create the scrollable button area, load plugin buttons, etc."""
-        button_canvas = tk.Canvas(self.root)
-        scrollbar = tk.Scrollbar(self.root, orient="vertical", command=button_canvas.yview)
-        btn_frame = tk.Frame(button_canvas)
+    def setup_btn_configs_window(self):
+        """Create the button area, load plugin btn_configs, etc."""
+        btn_frame = tk.Frame(self.root)
+        btn_frame.grid(row=0, column=0, sticky='nsew')
 
-        button_canvas.configure(yscrollcommand=scrollbar.set)
-        button_canvas.grid(row=0, column=0, sticky="nsew")
-        scrollbar.grid(row=0, column=1, sticky="ns")
-        button_canvas.create_window((0, 0), window=btn_frame, anchor="nw")
-
+        self.root.attributes("-topmost", True)
+        self.root.lift()
         self.root.grid_rowconfigure(0, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
 
@@ -180,100 +186,114 @@ class Orthy:
         }
         self.create_button(btn_frame, transparency_config)
         last_row = 1
+        
+        self.create_image_hide_show(btn_frame)          # Hide/Show
+        self.create_flip_controls(btn_frame)            # Flip H/V
+        self.create_rotation_point_control(btn_frame)   # Rotation Point
+        self.create_zoom_controls(btn_frame)            # Zoom In/Out
 
-        self.create_image_controls(btn_frame)        # Hide/Show
-        self.create_flip_controls(btn_frame)         # Flip H/V
-        self.create_rotation_point_control(btn_frame)
-        self.create_zoom_controls(btn_frame)
-        self.create_predefined_image_buttons(btn_frame)
-
-        # Process plugin buttons
+        self.create_predefined_image_btn_configs(btn_frame) # Predefined images
+        
+        # Process plugin btn_configs
         plugin_button_count = 0
+
         for plugin in self.plugin_loader.plugins.values():
             plugin_name = plugin.get_name()
-            buttons = plugin.get_buttons()
+            btn_configs = plugin.get_btn_configs() # Get the btn_cfgs 
             logging.info(f"Processing plugin: {plugin_name}")
-            logging.info(f"Found {len(buttons)} buttons for plugin {plugin_name}")
+            logging.info(f"Found {len(btn_configs)} btn_configs for plugin {plugin_name}")
 
-            for button_config in buttons:
-                if 'grid' not in button_config:
-                    button_config['grid'] = {
+            for btn_cfg in btn_configs:
+                if 'grid' not in btn_cfg:
+                    btn_cfg['grid'] = {
                         'row': last_row,
                         'column': 0,
                         'columnspan': 2,
                         'pady': 2,
                         'sticky': 'ew'
                     }
-                self.create_button(btn_frame, button_config)
+                self.plugin_buttons[plugin_name] = self.create_button(btn_frame, btn_cfg) # Bind the button to the plugin
+                self.__setattr__(f'btn_{plugin_name}', self.plugin_buttons[plugin_name]) # Add the button to the class
                 last_row += 1
                 plugin_button_count += 1
-                logging.info(f"Created button: {button_config.get('text')} for {plugin_name}")
-
+                logging.info(f"Created button: {btn_cfg.get('text')} for {plugin_name}")
+                
+                
         btn_frame.update_idletasks()
-        button_canvas.configure(scrollregion=button_canvas.bbox("all"))
-        logging.info(f"Completed loading {plugin_button_count} plugin buttons")
+        logging.info(f"Completed loading {plugin_button_count} plugin btn_configs")
 
     def create_button(self, parent, btn_cfg):
         """Create and grid a Tk button based on the dictionary config."""
-        button = tk.Button(
-            parent,
-            text=btn_cfg.get('text', ''),
-            command=btn_cfg.get('command'),
-            width=btn_cfg.get('width', 10)
+        button = tk.Button(     # Create a button  
+                            parent,
+                            text=btn_cfg.get('text', ''),
+                            command=btn_cfg.get('command'),
+                            width=btn_cfg.get('width', 10)
         )
 
-        if btn_cfg.get('bg'):
+        if btn_cfg.get('bg'):   # If the button config has a bg key, set the background color
             button.config(bg=btn_cfg['bg'])
-        if btn_cfg.get('fg'):
+        if btn_cfg.get('fg'):   # If the button config has a fg key, set the foreground color
             button.config(fg=btn_cfg['fg'])
 
-        grid_cfg = btn_cfg.get('grid', {})
-        if 'columnspan' in grid_cfg:
+        grid_cfg = btn_cfg.get('grid', {}) # define a grid_var using the method argument grid_cfg
+
+        if 'columnspan' in grid_cfg is not None: # Ensure columnspan is at least 1
             grid_cfg['columnspan'] = max(1, int(grid_cfg['columnspan']))
         else:
             grid_cfg['columnspan'] = 1
 
-        button.grid(**grid_cfg)
+        button.grid(**grid_cfg) # put the button on the grid
 
         # If variableName is provided, store a reference on self
         var_name = btn_cfg.get('variableName')
-        if var_name:
-            setattr(self, var_name, button)
-
+        if var_name is not None:
+            setattr(self, var_name, button) # Add an attribute to self, and bind the variable name
+                                            # to the button object
         return button
 
-    def create_image_controls(self, parent):
+    def create_image_hide_show(self, parent):
         """Build the Hide/Show button for the image window."""
-        buttons = [{
+        btn_configs = [{
             'text': 'Hide',
             'command': self.toggle_image_window,
             'grid': {'row': 1, 'column': 0, 'columnspan': 2, 'pady': 2, 'sticky': 'ew'},
             'width': 10,
             'variableName': 'btn_hide_show_image'
         }]
-        for btn_cfg in buttons:
+        for btn_cfg in btn_configs:
+            self.create_button(parent, btn_cfg)
+    def create_reset_button(self, parent):
+        btn_configs = [{
+            'text': 'Reset',
+            'command': self.reset_all(),
+            'grid': {'row': 1, 'column': 0, 'columnspan': 2, 'pady': 2, 'sticky': 'ew'},
+            'width': 10,
+            'variableName': 'btn_reset'
+        }]
+        for btn_cfg in btn_configs:
             self.create_button(parent, btn_cfg)
 
     def create_flip_controls(self, parent):
-        buttons = [
+        btn_configs = [
             {
                 'text': 'Flip H',
                 'command': self.flip_image_horizontal,
                 'grid': {'row': 2, 'column': 0, 'pady': 2, 'sticky': 'ew'},
-                'width': 6
+                'width': 5
             },
             {
                 'text': 'Flip V',
                 'command': self.flip_image_vertical,
                 'grid': {'row': 2, 'column': 1, 'pady': 2, 'sticky': 'ew'},
-                'width': 6
+                'width': 5
             }
         ]
-        for btn_cfg in buttons:
+        for btn_cfg in btn_configs:
             self.create_button(parent, btn_cfg)
 
     def create_rotation_point_control(self, parent):
-        buttons = [
+        btn_configs = [
             {
                 'text': 'Rot Pt',
                 'command': self.toggle_rotation_point_mode,
@@ -282,11 +302,11 @@ class Orthy:
                 'variableName': 'btn_rotation_point'
             }
         ]
-        for btn_cfg in buttons:
+        for btn_cfg in btn_configs:
             self.create_button(parent, btn_cfg)
 
     def create_zoom_controls(self, parent):
-        buttons = [
+        btn_configs = [
             {
                 'text': '+',
                 'command': self.zoom_in,
@@ -324,11 +344,11 @@ class Orthy:
                 'width': 6
             }
         ]
-        for btn_cfg in buttons:
+        for btn_cfg in btn_configs:
             self.create_button(parent, btn_cfg)
 
-    def create_predefined_image_buttons(self, parent):
-        image_buttons = [
+    def create_predefined_image_btn_configs(self, parent):
+        image_btn_configs = [
             ("Angul", "angulation.svg", self.toggle_angulation),
             ("Ruler", "liniar_new_n2.svg", self.toggle_ruler),
             ("Normal", "Normal(medium).svg", self.toggle_normal),
@@ -338,7 +358,7 @@ class Orthy:
             ("Narrow O", "NarrowOvoide.svg", self.toggle_narrow_ovoide),
         ]
         start_row = 10
-        for idx, (label, filename, command) in enumerate(image_buttons):
+        for idx, (label, filename, command) in enumerate(image_btn_configs):
             btn_cfg = {
                 'text': label,
                 'command': command,
@@ -376,7 +396,7 @@ class Orthy:
         self.image_window.bind('<Configure>', self.on_image_window_resize)
 
     def bind_canvas_events(self):
-        self.canvas.bind("<ButtonPress-1>", self.on_mouse_down)
+        self.canvas.bind("<ButtonPress-1>", self.on_mouse_down) # 
         self.canvas.bind("<ButtonRelease-1>", self.on_mouse_up)
         self.canvas.bind("<B1-Motion>", self.on_mouse_move)
         self.canvas.bind("<ButtonRelease-1>", self.on_canvas_click)
@@ -401,7 +421,7 @@ class Orthy:
             logging.info("Global hotkey: Ctrl+Alt+1 pressed. Toggling image control.")
             ic_plugin = self.plugin_loader.get_plugin("ImageControl")
             if ic_plugin:
-                self.root.after(0, ic_plugin.toggle_image_control)
+                self.root.after(0, self.toggle_image_control_from_plugin)   
             else:
                 logging.warning("ImageControl plugin not found.")
 
@@ -410,21 +430,18 @@ class Orthy:
             self.root.after(0, self.toggle_image_window)
 
         # If you re-enable full control, add your hotkey back
-        # def toggle_full_control_hotkey():
-        #     logging.info("Global hotkey: Ctrl+Alt+3 pressed. Toggling full control mode.")
-        #     self.root.after(0, self.toggle_full_control_mode_from_hotkey)
+        def toggle_full_control_maestro_hotkey():
+             logging.info("Global hotkey: Ctrl+Alt+3 pressed. Toggling full control mode.")
+             self.root.after(0, self.toggle_full_control_mode_from_plugin)
 
         def toggle_wsad_remap():
             logging.info("Global hotkey: Ctrl+Alt+4 pressed. Toggling WASD remap.")
-            keyboard_remapper_plugin = self.plugin_loader.get_plugin("LowLevelKeyboardRemapper")
-            if keyboard_remapper_plugin:
-                self.root.after(0, keyboard_remapper_plugin.toggle_remap)
-
+            self.root.after(0, self.toggle_low_level_keyboard_remap_from_plugin)
         try:
             self.global_hotkey_listener = keyboard.GlobalHotKeys({
                 '<ctrl>+<alt>+1': toggle_image_control_hotkey,
                 '<ctrl>+<alt>+2': toggle_image_window_hotkey,
-                # '<ctrl>+<alt>+3': toggle_full_control_hotkey,  # Commented out for now
+                '<ctrl>+<alt>+3': toggle_full_control_maestro_hotkey,  
                 '<ctrl>+<alt>+4': toggle_wsad_remap
             })
             self.global_hotkey_listener.start()
@@ -550,32 +567,13 @@ class Orthy:
         self.draw_images()
         logging.info(f"Reset transformations for image '{active_image.name}'.")
 
-    ########################################################################
-    # Toggle Window
-    ########################################################################
-
-    def toggle_image_window(self):
-        """Show or hide the separate image window."""
-        if self.image_window_visible:
-            self.image_window.withdraw()
-            self.image_window_visible = False
-            if hasattr(self, 'btn_hide_show_image'):
-                self.btn_hide_show_image.config(text="Show")
-            logging.info("Image window hidden.")
-        else:
-            self.image_window.deiconify()
-            self.image_window_visible = True
-            if hasattr(self, 'btn_hide_show_image'):
-                self.btn_hide_show_image.config(text="Hide")
-            logging.info("Image window shown.")
-            self.image_window.update_idletasks()
-            self.draw_images()
 
     ########################################################################
     # Image Transparency
     ########################################################################
 
     def toggle_transparency(self):
+
         """Toggle the active image's transparency between min and max."""
         active_image = self.get_active_image()
         if not active_image:
@@ -762,7 +760,7 @@ class Orthy:
             # Enable image control if present
             ic_plugin = self.plugin_loader.get_plugin("ImageControl")
             if ic_plugin:
-                ic_plugin.toggle_image_control(True)
+                ic_plugin.toggle_image_control()
 
             if not self.image_window_visible:
                 self.toggle_image_window()
@@ -783,7 +781,7 @@ class Orthy:
 
                 ic_plugin = self.plugin_loader.get_plugin("ImageControl")
                 if ic_plugin:
-                    ic_plugin.toggle_image_control(False)
+                    ic_plugin.toggle_image_control()
 
                 self.draw_images()
 
@@ -935,9 +933,26 @@ class Orthy:
             sys.exit(0)
 
     ########################################################################
-    # (Optional) Toggling Full Control
+    # Toggling Methods
     ########################################################################
-    def toggle_image_control_via_plugin(self):
+    def toggle_image_window(self):
+        """Show or hide the separate image window."""
+        if self.image_window_visible:
+            self.image_window.withdraw()
+            self.image_window_visible = False
+            if hasattr(self, 'btn_hide_show_image'):
+                self.btn_hide_show_image.config(text="Show")
+            logging.info("Image window hidden.")
+        else:
+            self.image_window.deiconify()
+            self.image_window_visible = True
+            if hasattr(self, 'btn_hide_show_image'):
+                self.btn_hide_show_image.config(text="Hide")
+            logging.info("Image window shown.")
+            self.image_window.update_idletasks()
+            self.draw_images()
+
+    def toggle_image_control_from_plugin(self):
         """Example method to toggle the ImageControl plugin from within Orthy."""
         ic_plugin = self.plugin_loader.get_plugin("ImageControl")
         if ic_plugin:
@@ -947,12 +962,43 @@ class Orthy:
 
     def toggle_full_control_mode_from_plugin(self):
         """Example method to toggle a hypothetical MaestroControls plugin from within Orthy."""
-        mc_plugin = self.plugin_loader.get_plugin("MaestroControls")
-        if mc_plugin and hasattr(mc_plugin, 'toggle_full_control'):
+        mc_plugin = self.plugin_loader.get_plugin("Maestro Controls")
+        if mc_plugin:
             mc_plugin.toggle_full_control()
         else:
             logging.warning("MaestroControls plugin not found or missing toggle_full_control method.")
+ 
+    def toggle_low_level_keyboard_remap_from_plugin(self):
+        """Example method to toggle a LowLevelKeyboardRemapper plugin from within Orthy."""
+        llkr_plugin = self.plugin_loader.get_plugin("LowLevelKeyboardRemapper")
+        if llkr_plugin:
+            llkr_plugin.toggle_remap()
+        else:
+            logging.warning("LowLevelKeyboardRemapper plugin not found.")
+    ########################################################################
+    # (Optional) Updating UI Elements
+    ########################################################################
+    
+    def register_plugin_sentinels(self, plugin_name, sentinel):
+        """Register sentinels for a plugin to update UI elements."""
+        if plugin_name not in self.plugin_sentinels:
+            self.plugin_sentinels[plugin_name] = sentinel
+            logging.info(f"Registered sentinels for plugin {plugin_name}: {sentinel}")
 
+    def update_plugin_sentinels(self, plugin_name, sentinel):
+        if plugin_name not in self.plugin_sentinels:
+            logging.warning(f"Plugin {plugin_name} not found in plugin_sentinels.")
+        else:
+            self.plugin_sentinels[plugin_name] = sentinel
+            logging.info(f"Updated sentinels for plugin {plugin_name}: {sentinel}")
+
+    def update_plugin_buttons(self, plugin_name):
+       # If the button has a true sentinel, make it green
+        if self.plugin_sentinels[plugin_name]:
+            self.plugin_buttons[plugin_name].config(bg='green')
+        else:
+            self.plugin_buttons[plugin_name].config(bg='red')
+                    
     ########################################################################
     # SVG-Related (Optional)
     ########################################################################
@@ -1024,9 +1070,66 @@ class Orthy:
             logging.error(f"Error getting transformed image: {e}")
             return None
 
-##############################################################################
+    ########################################################################
+    # Global Reset
+    ########################################################################
+    def reset_all(self):
+        """
+        Stop all listeners, cleanup plugins, close windows,
+        clear data, and reset internal state.
+        """
+        logging.info("Resetting all resources and plugins...")
+        # 1. Stop plugin threads/listeners
+        try:
+            if hasattr(self, 'plugin_loader'):
+                for plugin_name, plugin in self.plugin_loader.plugins.items():
+                    plugin.cleanup()
+                # (Optional) Clear out the plugin dictionary
+                self.plugin_loader.plugins.clear()
+        except Exception as e:
+            logging.error(f"Failed to cleanup plugins: {e}")
+
+        # 2. Stop global hotkey listener if present
+        if hasattr(self, 'global_hotkey_listener') and self.global_hotkey_listener:
+            self.global_hotkey_listener.stop()
+            self.global_hotkey_listener = None
+
+        # 3. Destroy all additional windows
+        for win in getattr(self, 'additional_windows', []):
+            if win.winfo_exists():
+                win.destroy()
+        self.additional_windows.clear()
+
+        # 4. Destroy main image window
+        if hasattr(self, 'image_window') and self.image_window.winfo_exists():
+            self.image_window.destroy()
+            self.image_window = None
+
+        # 5. Clear out images or any other data
+        self.images.clear()
+        self.active_image_name = None
+        self.previous_active_image_name = None
+
+        # 6. Reset flags/states
+        self.is_dragging = False
+        self.is_rotation_point_mode = False
+        self.alt_pressed = False
+        self.shift_pressed = False
+        self.full_control_mode = False
+        self.ghost_click_positions.clear()
+
+        # 7. If you want to keep the main root window open,
+        #    do not destroy self.root. Otherwise, you can close it too.
+        # self.root.destroy()
+        # Or re-init your plugins if you want to “start fresh.”
+
+        logging.info("All plugins and resources have been cleaned up.")
+    def restart(self):
+        self.plugin_loader.load_plugins(self)
+
+##################aaadd############################################################
 # Main Entry Point
-##############################################################################
+##############################################################################aad
 
 if __name__ == "__main__":
     root = tk.Tk()
