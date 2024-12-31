@@ -1,4 +1,5 @@
 import logging
+import math
 from pynput import keyboard
 from pynput.keyboard import Key, Controller
 from core.plugin_loader import OrthyPlugin
@@ -13,7 +14,6 @@ class ImageControlPlugin(OrthyPlugin):
 
     def initialize(self, app_instance):
         self.app = app_instance
-        
 
     def get_name(self):
         return "ImageControl"
@@ -30,24 +30,20 @@ class ImageControlPlugin(OrthyPlugin):
         }]
 
     def toggle_image_control(self):
-        
-        if self.image_control_mode is False:
-            if not self.image_control_mode and self.app.get_active_image():
-                self.image_control_mode = True
-                self.app.register_plugin_sentinels(self.get_name(),self.image_control_mode)
-                self.update_button()
-                self.start_global_key_capture()
-                logging.info("Image Control Enabled.")
-                if hasattr(self.app, 'btn_toggle_image_control'):
-                    self.app.btn_toggle_control_mode.config(
-                        text="Disable Image Ctrl",
-                        bg='green', 
-                        fg='white'
-                    )
+        if not self.image_control_mode and self.app.get_active_image():
+            self.image_control_mode = True
+            self.app.register_plugin_sentinels(self.get_name(), self.image_control_mode)
+            self.update_button()
+            self.start_global_key_capture()
+            logging.info("Image Control Enabled.")
+            if hasattr(self.app, 'btn_toggle_control_mode'):
+                self.app.btn_toggle_control_mode.config(
+                    text="Disable Image Ctrl",
+                    bg='green',
+                    fg='white'
+                )
         else:
-            # Toggle mode
-            if self.image_control_mode is True:
-                # Currently on, turn it off
+            if self.image_control_mode:
                 self.image_control_mode = False
                 self.update_button()
                 self.stop_global_key_capture()
@@ -112,16 +108,17 @@ class ImageControlPlugin(OrthyPlugin):
             self.shift_pressed = False
 
     def rotate_image(self, angle_increment):
-        self.app.canvas.after(0, self.app.adjust_rotation, angle_increment)
+        # Previously: self.app.adjust_rotation(angle_increment)
+        self.app.canvas.after(0, self.adjust_rotation, angle_increment)
 
     def fine_zoom_in_thread_safe(self):
-        self.app.canvas.after(0, self.app.fine_zoom_in)
+        self.app.canvas.after(0, self.fine_zoom_in)
 
     def fine_zoom_out_thread_safe(self):
-        self.app.canvas.after(0, self.app.fine_zoom_out)
+        self.app.canvas.after(0, self.fine_zoom_out)
 
     def toggle_rotation_point_mode_thread_safe(self):
-        self.app.canvas.after(0, self.app.toggle_rotation_point_mode)
+        self.app.canvas.after(0, self.toggle_rotation_point_mode)
 
     def move_image(self, direction):
         self.app.canvas.after(0, self._move_image_main_thread, direction)
@@ -148,13 +145,71 @@ class ImageControlPlugin(OrthyPlugin):
             self.keyboard_listener.stop()
             self.keyboard_listener = None
         logging.info("ImageControlPlugin cleaned up.")
-    
-    ##################################################################################
-    # Helper functions
-    ##################################################################################
 
     def update_button(self):
-        self.app.update_plugin_sentinels(self.get_name(),self.image_control_mode)
+        self.app.update_plugin_sentinels(self.get_name(), self.image_control_mode)
         self.app.update_plugin_buttons(self.get_name())
+        
+    def toggle_rotation_point_mode(self):
+        active_image = self.app.get_active_image()
+        if not active_image:
+            return
+        if not getattr(self.app, 'is_rotation_point_mode', False):
+            self.app.is_rotation_point_mode = True
+            logging.info("Rotation point mode enabled.")
+        else:
+            self.app.is_rotation_point_mode = False
+            active_image.rotation_point = None
+            logging.info("Rotation point mode disabled and rotation point reset.")
+        self.app.draw_images()
 
+    def zoom_in(self):
+        self.adjust_zoom(0.05)
 
+    def zoom_out(self):
+        self.adjust_zoom(-0.05)
+
+    def fine_zoom_in(self):
+        self.adjust_zoom(0.01)
+
+    def fine_zoom_out(self):
+        self.adjust_zoom(-0.01)
+
+    def adjust_zoom(self, amount):
+        active_image = self.app.get_active_image()
+        if not active_image:
+            return
+        active_image.scale = max(0.1, min(active_image.scale + amount, 10.0))
+        active_image.scale_log = math.log2(active_image.scale)
+        logging.info(f"Adjusted zoom for image '{active_image.name}' to scale {active_image.scale}.")
+        self.app.draw_images()
+
+    def fine_rotate_clockwise(self):
+        self.adjust_rotation(0.5)
+
+    def fine_rotate_counterclockwise(self):
+        self.adjust_rotation(-0.5)
+
+    def adjust_rotation(self, angle_increment):
+        active_image = self.app.get_active_image()
+        if not active_image:
+            return
+        active_image.angle = (active_image.angle + angle_increment) % 360
+        logging.info(f"Rotated image '{active_image.name}' by {angle_increment} degrees.")
+        self.app.draw_images()
+
+    def flip_image_horizontal(self):
+        active_image = self.app.get_active_image()
+        if not active_image:
+            return
+        active_image.is_flipped_horizontally = not active_image.is_flipped_horizontally
+        logging.info(f"Image '{active_image.name}' flipped horizontally.")
+        self.app.draw_images()
+
+    def flip_image_vertical(self):
+        active_image = self.app.get_active_image()
+        if not active_image:
+            return
+        active_image.is_flipped_vertically = not active_image.is_flipped_vertically
+        logging.info(f"Image '{active_image.name}' flipped vertically.")
+        self.app.draw_images()
