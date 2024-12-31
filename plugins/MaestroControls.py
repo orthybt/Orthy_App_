@@ -131,13 +131,12 @@ class MaestroControlsPlugin(OrthyPlugin):
             'BuccalLinear',     'LingualLinear', 
             'Intrusion',        "Extrusion",
             'MesialLinear',     'DistalLinear', 
+            "Occlusion", "Occlusion_Left", "Occlusion_Right",
             "EnFace", "BottomView", "TopView",
             "Play", "GridView", 
             'InitialUpper', 'FinalUpper', 
             'InitialLower', 'FinalLower',
-            'CentralOcclusion',
             'UpperArch', 'LowerArch',
-            "EnFaceOcclusion", "LateralOcclusionLeft", "LateralOcclusionRight",
         ]
         self.ghost_click_positions = {}
 
@@ -215,7 +214,7 @@ class MaestroControlsPlugin(OrthyPlugin):
             top.destroy()
 
         top = self._create_modal_window("Select Maestro Version")
-        top.width = 300
+        top.width = 150
         top.height = 150
         self._center_window(top)
         self._add_prompt_controls(top, "Select Maestro version:", option1, option2, select_option)
@@ -281,9 +280,9 @@ class MaestroControlsPlugin(OrthyPlugin):
                     '9': 'FinalLower',
                     '-': 'UpperArch',
                     '=': 'LowerArch',
-                    'y': 'EnFaceOcclusion',
-                    'h': 'LateralOcclusionLeft',
-                    'j': 'LateralOcclusionRight',
+                    'y': 'Occlusion',
+                    'h': 'Occlusion_Left',
+                    'j': 'Occlusion_Right',
                 }
                 action = mapping.get(key.char)
                 if action:

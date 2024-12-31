@@ -1,0 +1,26 @@
+TODO List
+=========
+
+High Priority:
+-------------
+- [ ] Set up project structure
+- [ ] Create basic UI layout
+- [ ] Implement user authentication
+
+Medium Priority:
+--------------
+- [ ] Add database integration
+- [ ] Create documentation
+- [ ] Set up testing framework
+
+Low Priority:
+------------
+- [ ] Optimize performance
+- [ ] Add additional features
+- [ ] Polish UI elements
+
+Notes:
+------
+* Use [ ] for pending tasks
+* Use [x] for completed tasks
+* Update this file regularly

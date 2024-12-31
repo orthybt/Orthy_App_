@@ -8,8 +8,13 @@ class GuiManager:
         self.create_main_buttons()
 
     def create_main_buttons(self):
+        # Main button frame
         button_frame = tk.Frame(self.root)
-        button_frame.pack(side="top", fill="x", padx=5, pady=5)
+        button_frame.grid(row=0, column=0, sticky="nsew")
+        self.root.attributes("-topmost", True)
+        self.root.lift()
+        self.root.grid_rowconfigure(0, weight=1)
+        self.root.grid_columnconfigure(0, weight=1)
 
         # Transparency
         self.transparency_button = tk.Button(
