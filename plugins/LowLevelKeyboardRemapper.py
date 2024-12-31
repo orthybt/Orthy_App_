@@ -63,7 +63,7 @@ class LowLevelKeyboardRemapper(OrthyPlugin):
         
         # Add shift+Q combination
         self.combo_map = {
-            (self.VK_LSHIFT, self.VK_Q): (0x11, 0x41)  # CTRL + A
+            (self.VK_LSHIFT, self.VK_Q): (self.VK_CONTROL, self.VK_A),
         }
 
         self.hooked_keys = set(self.key_map.keys()) | {self.VK_LSHIFT, self.VK_Q}
@@ -181,6 +181,7 @@ class LowLevelKeyboardRemapper(OrthyPlugin):
 
             # Handle shift+Q combo
             if vk_code == self.VK_Q and self.left_shift_pressed:
+                #key remap does  some weird stuff here we need to fix! :)
                 if wParam == win32con.WM_KEYDOWN:
                     key1, key2 = self.combo_map[(self.VK_LSHIFT, self.VK_Q)]
                     win32api.keybd_event(key1, 0, 0, 0)
