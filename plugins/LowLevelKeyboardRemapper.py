@@ -162,13 +162,13 @@ class LowLevelKeyboardRemapper(OrthyPlugin):
         
         try:
             if not self.active_mode or nCode < 0:
-                print("Not active")
+                #print("Not active")
                 return user32.CallNextHookEx(self.hook, nCode, wParam, lParam)
                 
 
             kbd = cast(lParam, POINTER(KBDLLHOOKSTRUCT)).contents
             vk_code = kbd.vkCode
-            print(vk_code)
+            #print(vk_code)
 
             if vk_code == 0x1B:  # VK_ESCAPE - Allow escape key to trigger safe shutdown
                 self.handle_interrupt()

@@ -2,7 +2,7 @@ import logging
 import os
 import ctypes
 from ctypes import wintypes
-from tkinter import messagebox, filedialog, Toplevel, Label, Frame, Button
+from tkinter import messagebox, filedialog, Toplevel, Label, Frame, Button, Radiobutton, StringVar
 from pynput import keyboard, mouse
 from pynput.keyboard import Key
 from  core.OrthyPlugin_Interface import OrthyPlugin
@@ -14,6 +14,7 @@ class MaestroControlsPlugin(OrthyPlugin):
         self.full_control_mode = False
         self.full_control_hotkey_listener = None
         self.maestro_version = None
+        self.maestro_location = None
         self.ghost_click_positions = {}
         self.alt_pressed = False
         self.ctrl_pressed = False
@@ -53,34 +54,35 @@ class MaestroControlsPlugin(OrthyPlugin):
             if self.maestro_version is not None and self.coords_loaded is True:
                 self.full_control_mode = True
                 self.start_full_control_hotkeys()
-                remmapper = self.app.plugin_loader.get_plugin('LowLevelKeyboardRemapper')
-                if remmapper is not None:
-                    remmapper.toggle_remap()
+                keyboard_remmapper = self.app.plugin_loader.get_plugin('LowLevelKeyboardRemapper')
+                if keyboard_remmapper is not None:
+                    keyboard_remmapper.toggle_remap()
                 self.update_button()
                 logging.info(f"Full Control Mode Resumed for Maestro {self.maestro_version}")
                 return
 
-            version = self.prompt_maestro_version()
-            if version is None:
+            version, location = self.prompt_maestro_settings()
+            if not version or not location:
                 return
             self.maestro_version = version
+            self.maestro_location = location
 
             if not self.setup_coordinates():
                 return
 
             self.full_control_mode = True
-            remmapper = self.app.plugin_loader.get_plugin('LowLevelKeyboardRemapper')
+            keyboard_remmapper = self.app.plugin_loader.get_plugin('LowLevelKeyboardRemapper')
             self.start_full_control_hotkeys()
-            if remmapper:
-                remmapper.toggle_remap()
+            if keyboard_remmapper:
+                keyboard_remmapper.toggle_remap()
             self.update_button()
-            logging.info(f"Full Control Mode Enabled for Maestro {self.maestro_version}")
+            logging.info(f"Full Control Mode Enabled for Maestro {self.maestro_version} {self.maestro_location}")
         else:
             # Turning off full control mode
             self.full_control_mode = False
-            remmapper = self.app.plugin_loader.get_plugin('LowLevelKeyboardRemapper')
-            if remmapper:
-                remmapper.toggle_remap()
+            keyboard_remmapper = self.app.plugin_loader.get_plugin('LowLevelKeyboardRemapper')
+            if keyboard_remmapper:
+                keyboard_remmapper.toggle_remap()
             self.stop_full_control_hotkeys()
             self.update_button()
             logging.info("Full Control Mode Disabled")
@@ -94,8 +96,10 @@ class MaestroControlsPlugin(OrthyPlugin):
            If yes (manual), run select_control_coordinates. If that fails, return False.
            If no, just return False (or you can decide to load a default file if you want).
         """
-        coords_file = os.path.join(self.app.base_dir, f'coords_maestro_{self.maestro_version}.txt')
+        coords_file = os.path.join(self.app.base_dir, f'coords_maestro_{self.maestro_version}_{self.maestro_location}.txt')
+        print(coords_file)
         if os.path.exists(coords_file):
+            logging.info(f"Coordinates file found: {coords_file}")
             # Load coordinates silently
             if self.load_coords_from_file(coords_file):
                 self.coords_loaded = True
@@ -172,7 +176,9 @@ class MaestroControlsPlugin(OrthyPlugin):
         return position[0]
 
     def save_coords_to_file(self, controls):
-        coords_file = os.path.join(self.app.base_dir, f'coords_maestro_{self.maestro_version}.txt')
+        coords_file = os.path.join(
+            self.app.base_dir,
+                    f'coords_maestro_{self.maestro_version}_{self.maestro_location}.txt')
         try:
             with open(coords_file, 'w') as f:
                 for c in controls:
@@ -205,6 +211,47 @@ class MaestroControlsPlugin(OrthyPlugin):
     def prompt_maestro_version(self):
         return self.create_dual_prompt("Maestro 4", "Maestro 6")
 
+    def prompt_maestro_settings(self):
+
+        """Prompt for Maestro version AND location in a single modal."""
+        selected_version = [None]
+        selected_location = [None]
+
+        def submit():
+            selected_version[0] = version_var.get()
+            selected_location[0] = location_var.get()
+            top.destroy()
+
+        top = Toplevel(self.app.root)
+        top.title("Select Maestro Settings")
+        top.attributes('-topmost', True)
+        top.grab_set()
+
+        Label(top, text="Select Maestro version:").pack(pady=5)
+        version_var = StringVar()
+        Radiobutton(top, text="Maestro 4", variable=version_var, value="4").pack()
+        Radiobutton(top, text="Maestro 6", variable=version_var, value="6").pack()
+
+        Label(top, text="Select Location:").pack(pady=5)
+        location_var = StringVar()
+        # Could use checkboxes, but radio is simpler for one pick
+        Radiobutton(top, text="Laptop", variable=location_var, value="laptop").pack()
+        Radiobutton(top, text="Office", variable=location_var, value="office").pack()
+        Radiobutton(top, text="Home",   variable=location_var, value="home").pack()
+
+        Button(top, text="OK", command=submit).pack(pady=10)
+
+        # Center & wait
+        top.update_idletasks()
+        w, h = top.winfo_width(), top.winfo_height()
+        x = (top.winfo_screenwidth() // 2) - (w // 2)
+        y = (top.winfo_screenheight() // 2) - (h // 2)
+        top.geometry(f'{w}x{h}+{x}+{y}')
+        top.wait_window()
+
+        # Return the chosen version/location
+        return selected_version[0], selected_location[0] 
+    
     def create_dual_prompt(self, option1, option2):
         selected = [None]
 
